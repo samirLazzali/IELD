@@ -1,14 +1,21 @@
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FileText } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface ProductCardProps {
+  id: string;
   title: string;
   price: string;
   category?: string;
 }
 
-export const ProductCard = ({ title, price, category }: ProductCardProps) => {
+export const ProductCard = ({ id, title, price, category }: ProductCardProps) => {
+  const navigate = useNavigate();
+
+  const handleClick = () => {
+    navigate(`/modeles/${id}`);
+  };
   return (
     <Card className="hover:shadow-lg transition-all duration-300 border-border">
       <CardHeader>
@@ -24,7 +31,8 @@ export const ProductCard = ({ title, price, category }: ProductCardProps) => {
         <p className="text-2xl font-semibold">{price}</p>
       </CardContent>
       <CardFooter>
-        <Button className="w-full rounded-full">Acheter maintenant</Button>
+        <Button onClick={handleClick}
+          className="w-full rounded-full">Acheter maintenant</Button>
       </CardFooter>
     </Card>
   );

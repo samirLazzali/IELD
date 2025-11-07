@@ -34,6 +34,8 @@ export default function ModeleDetail() {
     const [data, setData] = useState<Courrier | null>(null);
     const [loading, setLoading] = useState(true);
     const [err, setErr] = useState<string | null>(null);
+    const [touched, setTouched] = useState<Record<string, boolean>>({});
+    const [errorFields, setErrorFields] = useState<Record<string, boolean>>({});
 
     // état du formulaire (clé = id du champ ; valeur = saisie utilisateur)
     const [form, setForm] = useState<Record<string, string>>({});
@@ -73,6 +75,17 @@ export default function ModeleDetail() {
         fetch();
     }, [id]);
 
+    // --- helpers ---
+    const markFieldError = (fid: string) => {
+        setErrorFields((prev) => ({ ...prev, [fid]: true }));
+    };
+    const clearFieldError = (fid: string) => {
+        setErrorFields((prev) => {
+            const copy = { ...prev };
+            delete copy[fid];
+            return copy;
+        });
+    };
     const fields: CourrierField[] = useMemo(() => {
         try {
             return Array.isArray(data?.fields) ? (data?.fields as CourrierField[]) : [];
@@ -88,8 +101,21 @@ export default function ModeleDetail() {
     const onSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!data) return;
+        // vérifie tous les champs
+        const newErrors: Record<string, boolean> = {};
+        for (const [fid, val] of Object.entries(form)) {
+            if (!val || val.trim() === "") newErrors[fid] = true;
+        }
 
+        if (Object.keys(newErrors).length > 0) {
+            setErrorFields(newErrors);
+            // scroll jusqu’au premier champ manquant
+            const first = Object.keys(newErrors)[0];
+            document.getElementById(first)?.scrollIntoView({ behavior: "smooth", block: "center" });
+            return;
+        }
         setSubmitting(true);
+        setErrorFields({});
         try {
             console.log("Submitting form:", form);
 
@@ -139,6 +165,8 @@ export default function ModeleDetail() {
 
             console.log("SUBMIT payload:", payload);
             alert("Formulaire validé ! (voir console). Branche l’appel API quand tu es prêt.");
+            // navigate(`/submission/${submissionId}`);
+
         } catch (e: any) {
             console.error(e);
             alert("Une erreur est survenue.");
@@ -165,20 +193,33 @@ export default function ModeleDetail() {
                 )}
                 {fields.map((f) => {
                     const t = guessType(f);
+                    const hasError = !!errorFields[f.id];
+
                     const commonProps = {
                         id: f.id,
                         name: f.id,
                         // A voir si je decide de garder le label AI generated ou directement le [exctraceted] qui est directement ce que Ines à mis dans le doc
                         placeholder: stripBrackets(f.extracted),
                         value: form[f.id] ?? "",
-                        onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-                            onChangeField(f.id, e.target.value),
+                        onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+                            onChangeField(f.id, e.target.value);
+                            if (e.target.value.trim() !== "") clearFieldError(f.id);
+                        },
+                        className: hasError
+                            ? "border-red-500 focus-visible:ring-red-500"
+                            : undefined,
                     };
 
                     return (
                         <div key={f.id} className="space-y-2">
-                            <label htmlFor={f.id} className="block text-sm font-medium">
+                            <label
+                                htmlFor={f.id}
+                                className={`block text-sm font-medium ${hasError ? "text-red-600" : ""
+                                    }`}
+                            >
                                 {f.label}
+                                <span className="text-red-500 ml-1">*</span>
+
                             </label>
 
                             {t === "textarea" ? (
@@ -189,6 +230,9 @@ export default function ModeleDetail() {
                                 <Input {...commonProps} type="number" step="any" />
                             ) : (
                                 <Input {...commonProps} type="text" />
+                            )}
+                            {hasError && (
+                                <p className="text-xs text-red-500">Champ requis</p>
                             )}
                         </div>
                     );
@@ -203,16 +247,10 @@ export default function ModeleDetail() {
                 </button>
             </form>
 
-            {data.google_doc_url && (
-                <a
-                    href={data.google_doc_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-block mt-6 text-primary underline"
-                >
-                    Voir le document original
-                </a>
-            )}
+            <p
+                className="inline-block mt-6 text-primary text-xs italic"
+            >
+                Attention, pour le moment vos informations ne sont pas encore sauvegardé.                </p>
         </div>
     );
 }
