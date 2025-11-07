@@ -1,0 +1,218 @@
+// src/pages/ModeleDetail.tsx
+import { useParams } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { supabase } from "@/lib/supabaseClient";
+import type { Courrier, CourrierField } from "@/types/courrier";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils"; // si tu as un util cn; sinon supprime cn et les appels
+
+const EUR = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" });
+
+function stripBrackets(s?: string) {
+    if (!s) return "";
+    // supprime les crochets [ ... ] autour du placeholder
+    return s.replace(/^\[|\]$/g, "");
+}
+
+function guessType(field: CourrierField): "text" | "date" | "number" | "textarea" {
+    const src = `${field.id} ${field.label}`.toLowerCase();
+
+    if (src.includes("date")) return "date";
+    if (src.includes("nombre") || src.includes("montant") || src.includes("numéro") || src.includes("numero")) {
+        // nombre / montant / numero => number
+        return "number";
+    }
+    if (src.includes("adresse") || src.includes("signature") || field.label.length > 70) {
+        return "textarea";
+    }
+    return "text";
+}
+
+export default function ModeleDetail() {
+    const { id } = useParams<{ id: string }>();
+    const [data, setData] = useState<Courrier | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [err, setErr] = useState<string | null>(null);
+
+    // état du formulaire (clé = id du champ ; valeur = saisie utilisateur)
+    const [form, setForm] = useState<Record<string, string>>({});
+    const [submitting, setSubmitting] = useState(false);
+
+    useEffect(() => {
+        if (!id) return;
+
+        const fetch = async () => {
+            setLoading(true);
+            const { data, error } = await supabase
+                .from("courrier_template")
+                .select("*")
+                .eq("id", id)
+                .single();
+
+            if (error) {
+                setErr(error.message);
+                setData(null);
+            } else {
+                setData(data as Courrier);
+
+                // initialise le form avec des valeurs vides (ou placeholders si tu préfères)
+                const initial: Record<string, string> = {};
+                try {
+                    const fields: CourrierField[] = (data as any).fields ?? [];
+                    for (const f of fields) initial[f.id] = "";
+                } catch {
+                    // noop
+                }
+                setForm(initial);
+            }
+
+            setLoading(false);
+        };
+
+        fetch();
+    }, [id]);
+
+    const fields: CourrierField[] = useMemo(() => {
+        try {
+            return Array.isArray(data?.fields) ? (data?.fields as CourrierField[]) : [];
+        } catch {
+            return [];
+        }
+    }, [data]);
+
+    const onChangeField = (fid: string, value: string) => {
+        setForm((prev) => ({ ...prev, [fid]: value }));
+    };
+
+    const onSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!data) return;
+
+        setSubmitting(true);
+        try {
+            console.log("Submitting form:", form);
+
+            const insertPayload = {
+                template_id: data.id,       // <- le modèle sélectionné
+                filled_json: form,          // <- l'objet { champId: "valeur", ... } sera stocké en jsonb
+                preview_url: null,          // <- optionnel, laisse null avant génération
+                pdf_url: null,              // <- optionnel, laisse null avant génération
+            };
+
+            const { data: created, error: insertError } = await supabase
+                .from("courrier_submissions") // <-- nom exact de ta table
+                .insert(insertPayload)
+                .select("id")                // on ne récupère que l'id pour la suite
+                .single();
+
+            if (insertError) {
+                console.error(insertError);
+                alert("Échec de l’enregistrement de votre soumission.");
+                setSubmitting(false);
+                return;
+            }
+
+            const submissionId = created?.id as string;
+            console.log("SUBMIT payload:", submissionId);
+            // TODO : inserer dans submission 
+            // Appeller mon endpoint avec l'id de la submission
+
+
+            // Payload que tu pourras envoyer à ton service
+            const payload = {
+                id: submissionId,
+            };
+
+
+
+            // 👉 Intégration future : call ton endpoint de génération
+            const BASE_URL = "https://inesetledroit-726112210839.europe-west9.run.app";
+            const ENDPOINT = "/fill-courrier";
+            const resp = await fetch(`${BASE_URL}${ENDPOINT}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            });
+            const result = await resp.json();
+            // TODO: rediriger vers page de confirmation / téléchargement, etc.
+
+            console.log("SUBMIT payload:", payload);
+            alert("Formulaire validé ! (voir console). Branche l’appel API quand tu es prêt.");
+        } catch (e: any) {
+            console.error(e);
+            alert("Une erreur est survenue.");
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    if (loading) return <p className="text-center mt-20">Chargement…</p>;
+    if (err) return <p className="text-center text-red-600 mt-20">Erreur : {err}</p>;
+    if (!data) return <p className="text-center mt-20">Aucun modèle trouvé.</p>;
+
+    return (
+        <div className="min-h-screen pt-32 pb-20 container mx-auto px-4 max-w-3xl">
+            <h1 className="text-4xl font-bold mb-2">{data.title}</h1>
+            <p className="text-muted-foreground mb-6">{data.categorie}</p>
+            <p className="text-lg font-semibold mb-8">{EUR.format(Number(data.price))}</p>
+
+            {data.description && <p className="mb-8">{data.description}</p>}
+
+            <form onSubmit={onSubmit} className="space-y-6">
+                {fields.length === 0 && (
+                    <p className="text-muted-foreground">Aucun champ pour ce modèle.</p>
+                )}
+                {fields.map((f) => {
+                    const t = guessType(f);
+                    const commonProps = {
+                        id: f.id,
+                        name: f.id,
+                        // A voir si je decide de garder le label AI generated ou directement le [exctraceted] qui est directement ce que Ines à mis dans le doc
+                        placeholder: stripBrackets(f.extracted),
+                        value: form[f.id] ?? "",
+                        onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+                            onChangeField(f.id, e.target.value),
+                    };
+
+                    return (
+                        <div key={f.id} className="space-y-2">
+                            <label htmlFor={f.id} className="block text-sm font-medium">
+                                {f.label}
+                            </label>
+
+                            {t === "textarea" ? (
+                                <Textarea {...commonProps} className={cn("min-h-28")} />
+                            ) : t === "date" ? (
+                                <Input {...commonProps} type="date" />
+                            ) : t === "number" ? (
+                                <Input {...commonProps} type="number" step="any" />
+                            ) : (
+                                <Input {...commonProps} type="text" />
+                            )}
+                        </div>
+                    );
+                })}
+
+                <button
+                    type="submit"
+                    disabled={submitting}
+                    className="w-full py-3 rounded-lg bg-primary text-white font-medium hover:bg-primary/90 transition disabled:opacity-50"
+                >
+                    {submitting ? "Validation…" : "Valider"}
+                </button>
+            </form>
+
+            {data.google_doc_url && (
+                <a
+                    href={data.google_doc_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block mt-6 text-primary underline"
+                >
+                    Voir le document original
+                </a>
+            )}
+        </div>
+    );
+}
