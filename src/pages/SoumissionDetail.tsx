@@ -4,7 +4,6 @@ import { supabase } from "@/lib/supabaseClient";
 import type { Courrier } from "@/types/courrier";
 import type { CourrierSubmissions } from "@/types/courrier_submissions";
 import { loadStripe } from "@stripe/stripe-js";
-import PayWhatYouWant from "@/components/PayWhatYouWant";
 import PayInlineModal from "@/components/PayInlineModal";
 
 const EUR = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" });
