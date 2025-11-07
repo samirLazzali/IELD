@@ -3,6 +3,9 @@ import { useParams } from "react-router-dom";
 import { supabase } from "@/lib/supabaseClient";
 import type { Courrier } from "@/types/courrier";
 import type { CourrierSubmissions } from "@/types/courrier_submissions";
+import { loadStripe } from "@stripe/stripe-js";
+import PayWhatYouWant from "@/components/PayWhatYouWant";
+import PayInlineModal from "@/components/PayInlineModal";
 
 const EUR = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" });
 
@@ -19,6 +22,9 @@ export default function SoumissionDetail() {
 
     const pollCount = useRef(0);
     const [polling, setPolling] = useState(false);
+    const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY!);
+    const [openPay, setOpenPay] = useState(false);
+
 
     // 1) Charge la soumission
     useEffect(() => {
@@ -143,6 +149,7 @@ export default function SoumissionDetail() {
                 )}
 
                 {/* Preview */}
+                LES METTRE COTE A COTE
                 {/* <div className="border rounded-xl p-4 md:p-6 shadow-sm"> */}
                 {!subm.preview_url ? (
                     <div className="flex flex-col items-center justify-center py-10">
@@ -168,37 +175,21 @@ export default function SoumissionDetail() {
                 )}
                 {/* </div> */}
 
-                {/* Actions */}
-                <div className="mt-6 flex flex-col sm:flex-row gap-3">
-                    {subm.pdf_url ? (
-                        <a
-                            href={subm.pdf_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary/90 transition"
-                        >
-                            Télécharger le PDF
-                        </a>
-                    ) : (
-                        <button
-                            disabled
-                            className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-muted text-muted-foreground cursor-not-allowed"
-                        >
-                            PDF en préparation…
-                        </button>
-                    )}
+                {subm && tpl && (
+                    <>
 
-                    {tpl?.google_doc_url && (
-                        <a
-                            href={tpl.google_doc_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center justify-center px-4 py-2 rounded-lg border hover:bg-accent transition"
-                        >
-                            Voir le document source
-                        </a>
-                    )}
-                </div>
+                        <PayInlineModal
+                            submissionId={subm.id}
+                            templateId={tpl.id}
+                            title={tpl.title}
+                            suggestedPrice={Number(tpl.price ?? 0)}
+                        // buyerEmail={...} // si tu as l'email
+                        />
+                    </>
+                )}
+
+
+
             </div>
         </div>
     );
