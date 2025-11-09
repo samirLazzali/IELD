@@ -56,36 +56,50 @@ function InnerPaymentForm({
     const [showErrors, setShowErrors] = useState(false);
 
     // --- Données dérivées ---
-    const min = useMemo(() => Math.max(0, suggestedPrice || 0), [suggestedPrice]);
+    const min = useMemo(() => Math.max(0, suggestedPrice || 0), [suggestedPrice]); // min en €
     const minCents = Math.round(min * 100);
     const cents = Math.round((amount || 0) * 100);
     const freeAllowed = min === 0;
+
     const paying = cents > 0;
     const belowMin = paying && !freeAllowed && cents < minCents;
+
+    // Règle d'affichage de la carte :
+    // - min > 0 -> toujours afficher
+    // - min = 0 -> afficher seulement si l'utilisateur saisit un montant > 0
+    const showCard = min > 0 || paying;
 
     // --- Erreurs visuelles ---
     const firstNameError = showErrors && firstName.trim() === "";
     const lastNameError = showErrors && lastName.trim() === "";
     const emailValid = /^\S+@\S+\.\S+$/.test(email);
-    const emailError = showErrors && !emailValid;
-    const cardError = showErrors && paying && !cardComplete; // carte requise seulement si paiement > 0
-    console.log(cents)
-    const titlePayment = cents == 0 ? "Contribution libre" : "Montant minimum " + min.toFixed(2) + " €";
-    console.log(titlePayment)
+    const emailError = showErrors && paying && !emailValid;
+
+    // Carte requise uniquement si on tente un paiement > 0 ET que la carte est affichée
+    const cardError = showErrors && paying && showCard && !cardComplete;
+
+    // Titre : basé sur le min de BDD (pas sur le montant saisi)
+    const titlePayment =
+        min > 0 ? `Montant minimum ${min.toFixed(2)} €` : "Contribution libre";
 
     const pay = async () => {
         setShowErrors(true);
 
-        // Validation immédiate (sans dépendre d'un setState async)
+        // Validation immédiate
         const errors = {
             firstName: firstName.trim() === "",
             lastName: lastName.trim() === "",
             email: paying && !emailValid,
             belowMin: paying && !freeAllowed && cents < minCents,
-            card: paying && !cardComplete,
+            // Carte requise seulement si on est dans un flux payant valide (pas bloqué par belowMin)
+            card: paying && !belowMin && showCard && !cardComplete,
         };
         const hasErrors =
-            errors.firstName || errors.lastName || errors.email || errors.belowMin || errors.card;
+            errors.firstName ||
+            errors.lastName ||
+            errors.email ||
+            errors.belowMin ||
+            errors.card;
 
         if (hasErrors) return;
 
@@ -147,7 +161,6 @@ function InnerPaymentForm({
             });
 
             if (error) {
-                // Remonte un message d'erreur carte si Stripe en donne un
                 setCardErrorMsg(error.message || "Paiement refusé");
                 alert(error.message || "Paiement refusé");
                 return;
@@ -168,9 +181,11 @@ function InnerPaymentForm({
             <h2 className="text-xl font-semibold mb-3 text-center">
                 {titlePayment}
             </h2>
+
             <p className="text-sm text-muted-foreground mb-3 text-center">
-                {/* Montant minimum : {min.toFixed(2)} € {freeAllowed ? "Vous pouvez mettre 0€ ou le montant que vous voulez" : ""} */}
-                {freeAllowed ? "Vous pouvez mettre 0€ ou le montant que vous voulez" : ""}
+                {freeAllowed
+                    ? "Vous pouvez mettre 0 € ou le montant que vous voulez."
+                    : "Saisissez un montant au moins égal au minimum indiqué."}
             </p>
 
             {/* --- Prénom & Nom --- */}
@@ -183,7 +198,8 @@ function InnerPaymentForm({
                         type="text"
                         value={firstName}
                         onChange={(e) => setFirstName(e.target.value)}
-                        className={`w-full border rounded-md px-3 py-2 ${firstNameError ? "border-red-500" : ""}`}
+                        className={`w-full border rounded-md px-3 py-2 ${firstNameError ? "border-red-500" : ""
+                            }`}
                     />
                     {firstNameError && <p className="text-xs text-red-600 mt-1">Champ requis</p>}
                 </div>
@@ -196,13 +212,14 @@ function InnerPaymentForm({
                         type="text"
                         value={lastName}
                         onChange={(e) => setLastName(e.target.value)}
-                        className={`w-full border rounded-md px-3 py-2 ${lastNameError ? "border-red-500" : ""}`}
+                        className={`w-full border rounded-md px-3 py-2 ${lastNameError ? "border-red-500" : ""
+                            }`}
                     />
                     {lastNameError && <p className="text-xs text-red-600 mt-1">Champ requis</p>}
                 </div>
             </div>
 
-            {/* --- Email --- */}
+            {/* --- Email (requis uniquement si paying) --- */}
             <div className="mb-4">
                 <label className="text-sm block mb-1">
                     Email {paying && <span className="text-red-600">*</span>}
@@ -211,7 +228,8 @@ function InnerPaymentForm({
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className={`w-full border rounded-md px-3 py-2 ${emailError ? "border-red-500" : ""}`}
+                    className={`w-full border rounded-md px-3 py-2 ${emailError ? "border-red-500" : ""
+                        }`}
                     placeholder="prenom.nom@email.com"
                     autoComplete="email"
                 />
@@ -226,8 +244,17 @@ function InnerPaymentForm({
                     min={0}
                     step="0.5"
                     value={Number.isNaN(amount) ? 0 : amount}
-                    onChange={(e) => setAmount(parseFloat(e.target.value || "0"))}
-                    className={`w-full border rounded-md px-3 py-2 ${belowMin ? "border-red-500" : ""}`}
+                    onChange={(e) => {
+                        const v = parseFloat(e.target.value || "0");
+                        setAmount(v);
+                        // si l'utilisateur repasse à 0 dans un contexte gratuit, nettoyer les erreurs carte
+                        if ((min === 0) && (v <= 0)) {
+                            setCardErrorMsg(null);
+                            setCardComplete(false);
+                        }
+                    }}
+                    className={`w-full border rounded-md px-3 py-2 ${belowMin ? "border-red-500" : ""
+                        }`}
                 />
                 {belowMin && (
                     <p className="text-xs text-red-600 mt-1">
@@ -236,23 +263,21 @@ function InnerPaymentForm({
                 )}
             </div>
 
-            {/* --- Carte Stripe --- */}
-
-            <div className={`border rounded-md p-3 mb-2 ${cardError ? "border-red-500" : ""}`}>
-                <CardElement
-                    options={{ hidePostalCode: true }}
-                    onChange={(ev) => {
-                        setCardComplete(ev.complete);
-                        setCardErrorMsg(ev.error ? ev.error.message ?? null : null);
-                    }}
-                />
-            </div>
-            {/* Afficher message d’erreur carte :
-          - si la carte n’est pas complète après clic (required),
-          - ou si Stripe renvoie une erreur (ex: numéro invalide) */}
-            {cardError && <p className="text-xs text-red-600 mb-2">Carte requise</p>}
-            {!!cardErrorMsg && (
-                <p className="text-xs text-red-600 mb-2">{cardErrorMsg}</p>
+            {/* --- Carte Stripe (affichage conditionnel) --- */}
+            {showCard && (
+                <>
+                    <div className={`border rounded-md p-3 mb-2 ${cardError ? "border-red-500" : ""}`}>
+                        <CardElement
+                            options={{ hidePostalCode: true }}
+                            onChange={(ev) => {
+                                setCardComplete(ev.complete);
+                                setCardErrorMsg(ev.error ? ev.error.message ?? null : null);
+                            }}
+                        />
+                    </div>
+                    {cardError && <p className="text-xs text-red-600 mb-2">Carte requise</p>}
+                    {!!cardErrorMsg && <p className="text-xs text-red-600 mb-2">{cardErrorMsg}</p>}
+                </>
             )}
 
             <button

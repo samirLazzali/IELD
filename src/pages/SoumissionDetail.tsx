@@ -1,10 +1,10 @@
+// src/pages/SoumissionDetail.tsx
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/lib/supabaseClient";
 import type { Courrier } from "@/types/courrier";
 import type { CourrierSubmissions } from "@/types/courrier_submissions";
-import { loadStripe } from "@stripe/stripe-js";
-import PayInlineModal from "@/components/PayInlineModal";
+import PayInline from "@/components/PayInlineModal"; // ⬅️ inline (pas modal)
 
 const EUR = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" });
 
@@ -21,9 +21,6 @@ export default function SoumissionDetail() {
 
     const pollCount = useRef(0);
     const [polling, setPolling] = useState(false);
-    const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY!);
-    const [openPay, setOpenPay] = useState(false);
-
 
     // 1) Charge la soumission
     useEffect(() => {
@@ -89,7 +86,6 @@ export default function SoumissionDetail() {
             return;
         }
 
-        // si pas prêt, tente un polling
         setPolling(true);
         const iv = setInterval(async () => {
             pollCount.current += 1;
@@ -106,7 +102,6 @@ export default function SoumissionDetail() {
                 .single();
 
             if (error) {
-                // on stoppe silencieusement (on gardera l’état actuel)
                 clearInterval(iv);
                 setPolling(false);
                 return;
@@ -130,66 +125,93 @@ export default function SoumissionDetail() {
         [tpl]
     );
 
-    if (loading) return <div className="container mx-auto px-4 pt-32 pb-20"><p className="text-center">Chargement…</p></div>;
-    if (err) return <div className="container mx-auto px-4 pt-32 pb-20"><p className="text-center text-red-600">Erreur : {err}</p></div>;
-    if (!subm) return <div className="container mx-auto px-4 pt-32 pb-20"><p className="text-center">Soumission introuvable.</p></div>;
+    if (loading) {
+        return (
+            <div className="container mx-auto px-4 pt-32 pb-20">
+                <p className="text-center">Chargement…</p>
+            </div>
+        );
+    }
+    if (err) {
+        return (
+            <div className="container mx-auto px-4 pt-32 pb-20">
+                <p className="text-center text-red-600">Erreur : {err}</p>
+            </div>
+        );
+    }
+    if (!subm) {
+        return (
+            <div className="container mx-auto px-4 pt-32 pb-20">
+                <p className="text-center">Soumission introuvable.</p>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen pt-32 pb-20">
-            <div className="container mx-auto px-4 max-w-4xl">
+            <div className="container mx-auto px-4 max-w-6xl">
+                {/* Header */}
                 <h1 className="text-3xl md:text-4xl font-bold mb-2">
                     {tpl?.title ?? "Modèle"}
                 </h1>
                 {tpl?.categorie && (
-                    <p className="text-muted-foreground mb-4">{tpl.categorie}</p>
+                    <p className="text-muted-foreground mb-2">{tpl.categorie}</p>
                 )}
                 {tpl && (
                     <p className="text-lg font-semibold mb-8">{priceStr}</p>
                 )}
 
-                {/* Preview */}
-                LES METTRE COTE A COTE
-                {/* <div className="border rounded-xl p-4 md:p-6 shadow-sm"> */}
-                {!subm.preview_url ? (
-                    <div className="flex flex-col items-center justify-center py-10">
-                        <div className="animate-pulse h-56 w-full max-w-xl bg-muted rounded-md mb-4" />
-                        <p className="text-sm text-muted-foreground">
-                            Génération de l’aperçu en cours…
-                        </p>
-                        {polling && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                                Cela peut prendre quelques secondes.
-                            </p>
+                {/* === Layout responsive : 1 colonne mobile / 2 colonnes ≥ lg === */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {/* Colonne gauche : Preview */}
+                    - Enlever le input card si le prix est de 0€ et que c'est ok
+                    <br />
+                    <div>
+                        {!subm.preview_url ? (
+                            <div className="border rounded-xl p-4 md:p-6 shadow-sm">
+                                <div className="flex flex-col items-center justify-center py-10">
+                                    <div className="animate-pulse h-72 w-full bg-muted rounded-md mb-4" />
+                                    <p className="text-sm text-muted-foreground">
+                                        Génération de l’aperçu en cours…
+                                    </p>
+                                    {polling && (
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                            Cela peut prendre quelques secondes.
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="border rounded-xl shadow-sm bg-white max-w-lg mx-auto">
+                                <div className="flex flex-col items-center">
+                                    <img
+                                        src={subm.preview_url}
+                                        alt="Aperçu du document"
+                                        className="w-full pb-8 border-b rounded-t-md"
+                                        loading="eager"
+                                    />
+                                </div>
+                                <p className="p-4 md:p-6  mt-1 mb-2 text-center italic">
+                                    Voici un appercu de votre document.<br /> Vous pouvez maintenant procéder au paiement pour le recevoir par email au format PDF.
+
+                                </p>
+                            </div>
                         )}
                     </div>
-                ) : (
-                    <div className="flex flex-col items-center">
-                        <img
-                            src={subm.preview_url}
-                            alt="Aperçu du document"
-                            className="w-full max-w-xl rounded-md border"
-                            loading="eager"
-                        />
+
+                    {/* Colonne droite : Paiement — sticky en desktop */}
+                    <div className="lg:sticky lg:top-28">
+                        {subm && tpl && (
+                            <PayInline
+                                submissionId={subm.id}
+                                templateId={tpl.id}
+                                title={tpl.title}
+                                suggestedPrice={Number(tpl.price ?? 0)}
+                            />
+                        )}
                     </div>
-                )}
-                {/* </div> */}
-
-                {subm && tpl && (
-                    <>
-
-                        <PayInlineModal
-                            submissionId={subm.id}
-                            templateId={tpl.id}
-                            title={tpl.title}
-                            suggestedPrice={Number(tpl.price ?? 0)}
-                        // buyerEmail={...} // si tu as l'email
-                        />
-                    </>
-                )}
-
-
-
+                </div>
             </div>
-        </div>
+        </div >
     );
 }
