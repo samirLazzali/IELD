@@ -73,7 +73,7 @@ function InnerPaymentForm({
     const firstNameError = showErrors && firstName.trim() === "";
     const lastNameError = showErrors && lastName.trim() === "";
     const emailValid = /^\S+@\S+\.\S+$/.test(email);
-    const emailError = showErrors && paying && !emailValid;
+    const emailError = showErrors && !emailValid;
 
     // Carte requise uniquement si on tente un paiement > 0 ET que la carte est affichée
     const cardError = showErrors && paying && showCard && !cardComplete;
