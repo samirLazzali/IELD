@@ -66,10 +66,12 @@ function InnerPaymentForm({
     // --- Erreurs visuelles ---
     const firstNameError = showErrors && firstName.trim() === "";
     const lastNameError = showErrors && lastName.trim() === "";
-    const emailRequired = paying;
     const emailValid = /^\S+@\S+\.\S+$/.test(email);
-    const emailError = showErrors && emailRequired && !emailValid;
+    const emailError = showErrors && !emailValid;
     const cardError = showErrors && paying && !cardComplete; // carte requise seulement si paiement > 0
+    console.log(cents)
+    const titlePayment = cents == 0 ? "Contribution libre" : "Montant minimum " + min.toFixed(2) + " €";
+    console.log(titlePayment)
 
     const pay = async () => {
         setShowErrors(true);
@@ -162,14 +164,17 @@ function InnerPaymentForm({
     };
 
     return (
-        <div className="border rounded-2xl p-6 mt-10 max-w-lg mx-auto shadow-sm bg-white">
-            <h2 className="text-xl font-semibold mb-4 text-center">Contribution libre</h2>
-            <p className="text-sm text-muted-foreground mb-6 text-center">
-                Montant minimum : {min.toFixed(2)} € {freeAllowed ? "(vous pouvez mettre 0 €)" : ""}
+        <div className="border rounded-2xl p-6 max-w-lg mx-auto shadow-sm bg-white">
+            <h2 className="text-xl font-semibold mb-3 text-center">
+                {titlePayment}
+            </h2>
+            <p className="text-sm text-muted-foreground mb-3 text-center">
+                {/* Montant minimum : {min.toFixed(2)} € {freeAllowed ? "Vous pouvez mettre 0€ ou le montant que vous voulez" : ""} */}
+                {freeAllowed ? "Vous pouvez mettre 0€ ou le montant que vous voulez" : ""}
             </p>
 
             {/* --- Prénom & Nom --- */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 my-5">
                 <div>
                     <label className="text-sm block mb-1">
                         Prénom <span className="text-red-600">*</span>
@@ -232,6 +237,7 @@ function InnerPaymentForm({
             </div>
 
             {/* --- Carte Stripe --- */}
+
             <div className={`border rounded-md p-3 mb-2 ${cardError ? "border-red-500" : ""}`}>
                 <CardElement
                     options={{ hidePostalCode: true }}
