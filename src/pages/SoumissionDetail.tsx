@@ -61,7 +61,7 @@ export default function SoumissionDetail() {
         const fetchTemplate = async () => {
             const { data, error } = await supabase
                 .from("courrier_template")
-                .select("id, title, price, description, google_doc_url, categorie, created_at, fields")
+                .select("id, title, amount_cents, description, google_doc_url, categorie, created_at, fields")
                 .eq("id", subm.template_id)
                 .single();
 
@@ -71,6 +71,8 @@ export default function SoumissionDetail() {
                 setErr(error.message);
                 return;
             }
+            // 
+            // data["price"] = (data.amount_cents / 100).toString; // conversion cents → euros
             setTpl(data as Courrier);
         };
 
@@ -121,9 +123,10 @@ export default function SoumissionDetail() {
     }, [subm]);
 
     const priceStr = useMemo(
-        () => (tpl ? EUR.format(Number(tpl.price ?? 0)) : ""),
+        () => (tpl ? EUR.format(Number(tpl.amount_cents / 100)) : ""),
         [tpl]
     );
+
 
     if (loading) {
         return (
@@ -164,8 +167,6 @@ export default function SoumissionDetail() {
                 {/* === Layout responsive : 1 colonne mobile / 2 colonnes ≥ lg === */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     {/* Colonne gauche : Preview */}
-                    - Enlever le input card si le prix est de 0€ et que c'est ok
-                    <br />
                     <div>
                         {!subm.preview_url ? (
                             <div className="border rounded-xl p-4 md:p-6 shadow-sm">
@@ -204,9 +205,10 @@ export default function SoumissionDetail() {
                         {subm && tpl && (
                             <PayInline
                                 submissionId={subm.id}
-                                templateId={tpl.id}
+                                // templateId={tpl.id}
                                 title={tpl.title}
-                                suggestedPrice={Number(tpl.price ?? 0)}
+                                sugestedAmountCents={Number(tpl.amount_cents ?? 0)}
+                            // priceStr={priceStr}
                             />
                         )}
                     </div>

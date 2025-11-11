@@ -2,27 +2,30 @@
 import { useState, useMemo } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, useStripe, useElements, CardElement } from "@stripe/react-stripe-js";
-
+import { useNavigate } from "react-router-dom";
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY!);
 
 export default function PayInline({
     submissionId,
-    templateId,
+    // templateId,
     title,
-    suggestedPrice,
+    sugestedAmountCents,
+    // priceStr
 }: {
     submissionId: string;
-    templateId: string;
+    // templateId: string;
     title: string;
-    suggestedPrice: number;
+    sugestedAmountCents: number;
+    // priceStr: string;
+
 }) {
     return (
         <Elements stripe={stripePromise}>
             <InnerPaymentForm
                 submissionId={submissionId}
-                templateId={templateId}
                 title={title}
-                suggestedPrice={suggestedPrice}
+                sugestedAmountCents={sugestedAmountCents}
+            // priceStr={priceStr}
             />
         </Elements>
     );
@@ -30,14 +33,16 @@ export default function PayInline({
 
 function InnerPaymentForm({
     submissionId,
-    templateId,
     title,
-    suggestedPrice,
+    sugestedAmountCents,
+    // priceStr
 }: {
     submissionId: string;
-    templateId: string;
+    // templateId: string;
     title: string;
-    suggestedPrice: number;
+    sugestedAmountCents: number;
+    // priceStr: string;
+
 }) {
     const stripe = useStripe();
     const elements = useElements();
@@ -46,7 +51,8 @@ function InnerPaymentForm({
     const [firstName, setFirstName] = useState("");
     const [lastName, setLastName] = useState("");
     const [email, setEmail] = useState("");
-    const [amount, setAmount] = useState<number>(suggestedPrice || 0);
+    const sugestedAmountFloat = sugestedAmountCents / 100;
+    const [amountFloat, setAmount] = useState<number>(sugestedAmountFloat);
 
     // --- Stripe Card state ---
     const [cardComplete, setCardComplete] = useState(false);
@@ -54,15 +60,17 @@ function InnerPaymentForm({
 
     const [loading, setLoading] = useState(false);
     const [showErrors, setShowErrors] = useState(false);
+    const navigate = useNavigate();
 
     // --- Données dérivées ---
-    const min = useMemo(() => Math.max(0, suggestedPrice || 0), [suggestedPrice]); // min en €
+    const min = useMemo(() => Math.max(0, sugestedAmountFloat || 0), [sugestedAmountFloat]); // min en €
     const minCents = Math.round(min * 100);
-    const cents = Math.round((amount || 0) * 100);
+    // const cents = Math.round((amount || 0) * 100);
+    const cents = sugestedAmountCents // remplacer la var cents
     const freeAllowed = min === 0;
 
     const paying = cents > 0;
-    const belowMin = paying && !freeAllowed && cents < minCents;
+    const belowMin = paying && !freeAllowed && (amountFloat * 100) < minCents;
 
     // Règle d'affichage de la carte :
     // - min > 0 -> toujours afficher
@@ -113,35 +121,38 @@ function InnerPaymentForm({
                     setLoading(false);
                     return;
                 }
-                const r = await fetch(`${import.meta.env.VITE_API_BASE_URL}/payments/mark-free`, {
+                const r = await fetch(`${import.meta.env.VITE_API_STRIPE_URL}/payments/pay`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
+                        title: title,
                         submission_id: submissionId,
-                        template_id: templateId,
-                        title,
-                        buyer_email: email || null,
-                        buyer_first_name: firstName,
-                        buyer_last_name: lastName,
+                        // template_id: templateId,
+                        amount: 0, // cent ? 
+                        buyer_email: email,
+                        buyer_name: firstName + " " + lastName,
                     }),
                 });
+                console.log(r);
                 if (!r.ok) throw new Error(await r.text());
+                navigate(`/`); // todo MERCI
+
                 window.location.reload();
                 return;
             }
 
             // --- CAS PAYANT ---
-            const r = await fetch(`${import.meta.env.VITE_API_BASE_URL}/payments/create-payment-intent`, {
+            const r = await fetch(`${import.meta.env.VITE_API_STRIPE_URL}/payments/pay`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     submission_id: submissionId,
-                    template_id: templateId,
-                    title,
-                    amount_cents: cents,
+                    // template_id: templateId,
+                    title: title,
+                    amount: amountFloat * 100,
                     buyer_email: email,
-                    buyer_first_name: firstName,
-                    buyer_last_name: lastName,
+                    buyer_name: firstName + " " + lastName,
+
                 }),
             });
             if (!r.ok) throw new Error(await r.text());
@@ -159,6 +170,7 @@ function InnerPaymentForm({
                     },
                 },
             });
+            console.log(paymentIntent);
 
             if (error) {
                 setCardErrorMsg(error.message || "Paiement refusé");
@@ -166,7 +178,8 @@ function InnerPaymentForm({
                 return;
             }
             if (paymentIntent?.status === "succeeded") {
-                window.location.reload();
+                // window.location.reload();
+                console.log("Paiement réussi !");
             }
         } catch (err: any) {
             console.error(err);
@@ -197,6 +210,7 @@ function InnerPaymentForm({
                     <input
                         type="text"
                         value={firstName}
+                        placeholder="John"
                         onChange={(e) => setFirstName(e.target.value)}
                         className={`w-full border rounded-md px-3 py-2 ${firstNameError ? "border-red-500" : ""
                             }`}
@@ -211,6 +225,7 @@ function InnerPaymentForm({
                     <input
                         type="text"
                         value={lastName}
+                        placeholder="Doe"
                         onChange={(e) => setLastName(e.target.value)}
                         className={`w-full border rounded-md px-3 py-2 ${lastNameError ? "border-red-500" : ""
                             }`}
@@ -243,7 +258,7 @@ function InnerPaymentForm({
                     type="number"
                     min={0}
                     step="0.5"
-                    value={Number.isNaN(amount) ? 0 : amount}
+                    value={amountFloat}
                     onChange={(e) => {
                         const v = parseFloat(e.target.value || "0");
                         setAmount(v);

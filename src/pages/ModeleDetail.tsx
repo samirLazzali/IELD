@@ -150,10 +150,8 @@ export default function ModeleDetail() {
                 id: submissionId,
             };
 
-
-
             // 👉 Intégration future : call ton endpoint de génération
-            const BASE_URL = "https://inesetledroit-726112210839.europe-west9.run.app";
+            const BASE_URL = import.meta.env.VITE_API_BACK_URL
             const ENDPOINT = "/fill-courrier";
             const resp = await fetch(`${BASE_URL}${ENDPOINT}`, {
                 method: "POST",
