@@ -6,6 +6,7 @@ import type { Courrier, CourrierField } from "@/types/courrier";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils"; // si tu as un util cn; sinon supprime cn et les appels
+import { useNavigate } from "react-router-dom";
 
 const EUR = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" });
 
@@ -36,6 +37,7 @@ export default function ModeleDetail() {
     const [err, setErr] = useState<string | null>(null);
     const [touched, setTouched] = useState<Record<string, boolean>>({});
     const [errorFields, setErrorFields] = useState<Record<string, boolean>>({});
+    const navigate = useNavigate();
 
     // état du formulaire (clé = id du champ ; valeur = saisie utilisateur)
     const [form, setForm] = useState<Record<string, string>>({});
@@ -162,8 +164,8 @@ export default function ModeleDetail() {
             // TODO: rediriger vers page de confirmation / téléchargement, etc.
 
             console.log("SUBMIT payload:", payload);
-            alert("Formulaire validé ! (voir console). Branche l’appel API quand tu es prêt.");
-            // navigate(`/submission/${submissionId}`);
+            // alert("Formulaire validé ! (voir console). Branche l’appel API quand tu es prêt.");
+            navigate(`/submission/${submissionId}`);
 
         } catch (e: any) {
             console.error(e);
