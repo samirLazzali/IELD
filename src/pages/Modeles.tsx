@@ -37,7 +37,7 @@ const Modeles = () => {
       // Base query
       let query = supabase
         .from("courrier_template") // <-- remplace par le nom exact de ta table
-        .select("id, created_at, price, title, description, google_doc_url, categorie")
+        .select("id, created_at, amount_cents, title, description, google_doc_url, categorie")
         .order("created_at", { ascending: false })
         .limit(60);
 
@@ -72,7 +72,7 @@ const Modeles = () => {
   const grid = useMemo(() => {
     return items.map((it) => ({
       title: it.title,
-      price: EUR.format(Number(it.price ?? 0)),
+      price: EUR.format(Number(it.amount_cents / 100)),
       category: it.categorie ?? "Autre",
       id: it.id,
     }));
