@@ -14,6 +14,7 @@ import Etudiants from "./pages/Etudiants";
 import ModeleDetail from "./pages/ModeleDetail";
 import SoumissionDetail from "./pages/SoumissionDetail";
 import NotFound from "./pages/NotFound";
+import Merci from "./pages/Merci";
 
 const queryClient = new QueryClient();
 
@@ -35,6 +36,7 @@ const App = () => (
               <Route path="/etudiants" element={<Etudiants />} />
               <Route path="/modeles/:id" element={<ModeleDetail />} />
               <Route path="/soumission/:id" element={<SoumissionDetail />} />
+              <Route path="/merci" element={<Merci />} />
 
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

@@ -135,7 +135,7 @@ function InnerPaymentForm({
                 });
                 console.log(r);
                 if (!r.ok) throw new Error(await r.text());
-                navigate(`/`); // todo MERCI
+                navigate(`/merci`);
 
                 window.location.reload();
                 return;
@@ -178,7 +178,7 @@ function InnerPaymentForm({
                 return;
             }
             if (paymentIntent?.status === "succeeded") {
-                // window.location.reload();
+                navigate(`/merci`);
                 console.log("Paiement réussi !");
             }
         } catch (err: any) {
