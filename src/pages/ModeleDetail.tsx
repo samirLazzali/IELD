@@ -165,7 +165,7 @@ export default function ModeleDetail() {
 
             console.log("SUBMIT payload:", payload);
             // alert("Formulaire validé ! (voir console). Branche l’appel API quand tu es prêt.");
-            navigate(`/submission/${submissionId}`);
+            navigate(`/soumission/${submissionId}`);
 
         } catch (e: any) {
             console.error(e);
