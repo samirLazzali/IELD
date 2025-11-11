@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 
 const Merci = () => {
     return (
-        <div className="min-h-[80vh] flex items-center justify-center px-4">
+        <div className="pt-32 min-h-screen flex items-center justify-center px-4">
             <div className="max-w-2xl w-full text-center">
                 <div className="mb-8 flex justify-center">
                     <CheckCircle className="h-24 w-24 text-primary" />
