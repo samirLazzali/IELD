@@ -181,7 +181,7 @@ export default function ModeleDetail() {
         <div className="min-h-screen pt-32 pb-20 container mx-auto px-4 max-w-3xl">
             <h1 className="text-4xl font-bold mb-2">{data.title}</h1>
             <p className="text-muted-foreground mb-6">{data.categorie}</p>
-            <p className="text-lg font-semibold mb-8">{EUR.format(Number(data.price))}</p>
+            <p className="text-lg font-semibold mb-8">{EUR.format(Number(data.amount_cents / 100))}</p>
 
             {data.description && <p className="mb-8">{data.description}</p>}
 
