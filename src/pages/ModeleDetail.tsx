@@ -37,7 +37,7 @@ export default function ModeleDetail() {
     const [err, setErr] = useState<string | null>(null);
     const [errorFields, setErrorFields] = useState<Record<string, boolean>>({});
     const navigate = useNavigate();
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
 
     // état du formulaire (clé = id du champ ; valeur = saisie utilisateur)
     const [form, setForm] = useState<Record<string, string>>({});
@@ -183,7 +183,7 @@ export default function ModeleDetail() {
     return (
         <div className="min-h-screen pt-32 pb-20 container mx-auto px-4 max-w-3xl">
             <LoaderOverlay visible={isLoading} label="Génération du courrier…" />
-            <div aria-hidden={isLoading} className={isLoading ? "pointer-events-none opacity-0" : "opacity-100 transition-opacity"}>
+            <div aria-hidden={isLoading} className={isLoading ? "pointer-events-none opacity-0" : "opacity-90 transition-opacity"}>
 
                 <h1 className="text-4xl font-bold mb-2">{data.title}</h1>
                 <p className="text-muted-foreground mb-6">{data.categorie}</p>
