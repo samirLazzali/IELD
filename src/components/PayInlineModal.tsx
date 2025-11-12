@@ -75,7 +75,7 @@ function InnerPaymentForm({
     // Règle d'affichage de la carte :
     // - min > 0 -> toujours afficher
     // - min = 0 -> afficher seulement si l'utilisateur saisit un montant > 0
-    const showCard = min > 0 || paying;
+    const showCard = min > 0 || paying || amountFloat > 0;
 
     // --- Erreurs visuelles ---
     const firstNameError = showErrors && firstName.trim() === "";
