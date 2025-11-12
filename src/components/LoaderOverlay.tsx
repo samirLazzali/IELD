@@ -60,7 +60,7 @@ export default function LoaderOverlay({
             <div className="text-center">
                 <p className="text-base text-muted-foreground">{label}</p>
                 <p className="text-sm text-muted-foreground/70">
-                    Cela peut prendre jusqu’à 1 minute…
+                    Cela peut prendre quelques minutes…
                 </p>
             </div>
         </div>
