@@ -18,6 +18,18 @@ function useDebouncedValue<T>(value: T, delay = 300) {
   return v;
 }
 
+// --- Nouvelle fonction de filtrage ---
+function filterModeles(items: Courrier[], query: string): Courrier[] {
+  if (!query.trim()) return items;
+  const q = query.toLowerCase();
+  return items.filter(
+    (it) =>
+      it.title?.toLowerCase().includes(q) ||
+      it.description?.toLowerCase().includes(q) ||
+      it.categorie?.toLowerCase().includes(q)
+  );
+}
+
 const Modeles = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const debounced = useDebouncedValue(searchQuery, 300);
@@ -26,7 +38,7 @@ const Modeles = () => {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
-  // Fetch côté serveur, avec filtre ILIKE si search
+  // --- Fetch initial (tous les modèles publics) ---
   useEffect(() => {
     let isCancelled = false;
 
@@ -34,32 +46,18 @@ const Modeles = () => {
       setLoading(true);
       setErr(null);
 
-      // Base query
-      let query = supabase
-        .from("courrier_template") // <-- remplace par le nom exact de ta table
+      const { data, error } = await supabase
+        .from("courrier_template")
         .select("id, created_at, amount_cents, title, description, google_doc_url, categorie")
         .order("created_at", { ascending: false })
-        .limit(60);
-
-      // Optionnel : si tu as une colonne is_public
-      // query = query.eq("is_public", true);
-
-      if (debounced && debounced.trim() !== "") {
-        const q = debounced.trim();
-        // Filtre multi-champs
-        query = query.or(
-          `title.ilike.%${q}%,description.ilike.%${q}%,categorie.ilike.%${q}%`
-        );
-      }
-
-      const { data, error } = await query;
+        .limit(200);
 
       if (!isCancelled) {
         if (error) {
           setErr(error.message);
           setItems([]);
         } else {
-          setItems((data ?? []) as unknown as Courrier[]);
+          setItems(data ?? []);
         }
         setLoading(false);
       }
@@ -67,16 +65,19 @@ const Modeles = () => {
 
     fetchData();
     return () => { isCancelled = true; };
-  }, [debounced]);
+  }, []);
+
+  // --- Applique le filtre local ---
+  const filtered = useMemo(() => filterModeles(items, debounced), [items, debounced]);
 
   const grid = useMemo(() => {
-    return items.map((it) => ({
+    return filtered.map((it) => ({
       title: it.title,
       price: EUR.format(Number(it.amount_cents / 100)),
       category: it.categorie ?? "Autre",
       id: it.id,
     }));
-  }, [items]);
+  }, [filtered]);
 
   return (
     <div className="min-h-screen pt-32 pb-20">
@@ -86,7 +87,7 @@ const Modeles = () => {
         </h1>
 
         {/* Search Bar */}
-        {/* <div className="max-w-2xl mx-auto mb-12">
+        <div className="max-w-2xl mx-auto mb-12">
           <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground h-5 w-5" />
             <Input
@@ -97,17 +98,11 @@ const Modeles = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-        </div> */}
+        </div>
 
         {/* States */}
-        {loading && (
-          <p className="text-center text-muted-foreground">Chargement…</p>
-        )}
-        {err && (
-          <p className="text-center text-red-600">
-            Erreur de chargement : {err}
-          </p>
-        )}
+        {loading && <p className="text-center text-muted-foreground">Chargement…</p>}
+        {err && <p className="text-center text-red-600">Erreur de chargement : {err}</p>}
 
         {/* Products Grid */}
         {!loading && !err && (
@@ -119,8 +114,6 @@ const Modeles = () => {
                 title={p.title}
                 price={p.price}
                 category={p.category}
-              // Tu peux aussi passer un onClick ou un href vers une page détail:
-              // href={`/courrier/${p.id}`}
               />
             ))}
             {grid.length === 0 && (
