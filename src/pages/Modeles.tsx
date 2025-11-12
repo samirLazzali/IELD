@@ -161,12 +161,10 @@ const Modeles = () => {
             </div>
           </div>
 
-          {debounced.length > 0 && debounced.length < 3 ? (
-            <p className="text-center mt-6 text-muted-foreground">
+          {debounced.length > 0 && debounced.length < 3 && (
+            <p className="text-center text-muted-foreground">
               Tapez au moins 3 lettres pour rechercher.
             </p>
-          ) : (
-            <div className="h-12 boder-black" />
           )}
         </div>
 
