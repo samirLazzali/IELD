@@ -37,7 +37,7 @@ export default function ModeleDetail() {
     const [err, setErr] = useState<string | null>(null);
     const [errorFields, setErrorFields] = useState<Record<string, boolean>>({});
     const navigate = useNavigate();
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(false);
 
     // état du formulaire (clé = id du champ ; valeur = saisie utilisateur)
     const [form, setForm] = useState<Record<string, string>>({});
