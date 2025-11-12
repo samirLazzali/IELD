@@ -1,9 +1,11 @@
+// Modeles.tsx
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ProductCard } from "@/components/ProductCard";
 import { supabase } from "@/lib/supabaseClient";
 import type { Courrier } from "@/types/courrier";
+import { filterModelesFuzzy } from "@/components/useFuseSearch"; // <-- le fichier de la fonction
 
 const EUR = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" });
 
@@ -18,18 +20,6 @@ function useDebouncedValue<T>(value: T, delay = 300) {
   return v;
 }
 
-// --- Nouvelle fonction de filtrage ---
-function filterModeles(items: Courrier[], query: string): Courrier[] {
-  if (!query.trim()) return items;
-  const q = query.toLowerCase();
-  return items.filter(
-    (it) =>
-      it.title?.toLowerCase().includes(q) ||
-      it.description?.toLowerCase().includes(q) ||
-      it.categorie?.toLowerCase().includes(q)
-  );
-}
-
 const Modeles = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const debounced = useDebouncedValue(searchQuery, 300);
@@ -38,7 +28,6 @@ const Modeles = () => {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
-  // --- Fetch initial (tous les modèles publics) ---
   useEffect(() => {
     let isCancelled = false;
 
@@ -67,8 +56,39 @@ const Modeles = () => {
     return () => { isCancelled = true; };
   }, []);
 
-  // --- Applique le filtre local ---
-  const filtered = useMemo(() => filterModeles(items, debounced), [items, debounced]);
+  // 🔎 Fuzzy côté client
+  // const filtered = useMemo(() => filterModelesFuzzy(items, debounced), [items, debounced]);
+
+
+
+  // ######################
+  // CATEG
+  // ######################
+
+  const [selectedCat, setSelectedCat] = useState<string | null>(null);
+
+  // dérive la liste des catégories depuis les items chargés
+  const categories = useMemo(() => {
+    const s = new Set<string>();
+    for (const it of items) if (it.categorie) s.add(it.categorie);
+    return Array.from(s).sort((a, b) => a.localeCompare(b, "fr"));
+  }, [items]);
+
+  // 1) filtre catégorie -> 2) fuzzy
+  const baseAfterCat = useMemo(
+    () => (selectedCat ? items.filter(it => it.categorie === selectedCat) : items),
+    [items, selectedCat]
+  );
+
+  const filtered = useMemo(
+    () => filterModelesFuzzy(baseAfterCat, debounced),
+    [baseAfterCat, debounced]
+  );
+
+  // ######################
+  // CATEG
+  // ######################
+
 
   const grid = useMemo(() => {
     return filtered.map((it) => ({
@@ -78,7 +98,6 @@ const Modeles = () => {
       id: it.id,
     }));
   }, [filtered]);
-
   return (
     <div className="min-h-screen pt-32 pb-20">
       <div className="container mx-auto px-4">
@@ -86,8 +105,7 @@ const Modeles = () => {
           Modèles de courriers juridiques
         </h1>
 
-        {/* Search Bar */}
-        <div className="max-w-2xl mx-auto mb-12">
+        <div className="max-w-2xl mx-auto mb-6">
           <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground h-5 w-5" />
             <Input
@@ -98,23 +116,67 @@ const Modeles = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
+          {/* Tag strip */}
+          <div className="max-w-2xl mx-auto">
+            <div
+              className="flex gap-2 overflow-x-auto whitespace-nowrap no-scrollbar py-2"
+              aria-label="Filtrer par catégorie"
+            >
+              {/* Bouton “Tous” */}
+              <button
+                type="button"
+                onClick={() => setSelectedCat(null)}
+                className={[
+                  "px-3 py-1 text-sm rounded-full border",
+                  "transition-colors",
+                  selectedCat === null
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-muted/40 hover:bg-muted border-border"
+                ].join(" ")}
+                aria-pressed={selectedCat === null}
+              >
+                Tous
+              </button>
+
+              {categories.map((cat) => {
+                const active = selectedCat === cat;
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setSelectedCat(active ? null : cat)}
+                    className={[
+                      "px-3 py-1 text-sm rounded-full border",
+                      "transition-colors",
+                      active
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-muted/40 hover:bg-muted border-border"
+                    ].join(" ")}
+                    aria-pressed={active}
+                  >
+                    {cat}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {debounced.length > 0 && debounced.length < 3 ? (
+            <p className="text-center mt-6 text-muted-foreground">
+              Tapez au moins 3 lettres pour rechercher.
+            </p>
+          ) : (
+            <div className="h-12 boder-black" />
+          )}
         </div>
 
-        {/* States */}
         {loading && <p className="text-center text-muted-foreground">Chargement…</p>}
         {err && <p className="text-center text-red-600">Erreur de chargement : {err}</p>}
 
-        {/* Products Grid */}
         {!loading && !err && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
             {grid.map((p) => (
-              <ProductCard
-                key={p.id}
-                id={p.id}
-                title={p.title}
-                price={p.price}
-                category={p.category}
-              />
+              <ProductCard key={p.id} id={p.id} title={p.title} price={p.price} category={p.category} />
             ))}
             {grid.length === 0 && (
               <p className="col-span-full text-center text-muted-foreground">
