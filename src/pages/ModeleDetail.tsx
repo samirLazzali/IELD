@@ -33,7 +33,6 @@ function guessType(field: CourrierField): "text" | "date" | "number" | "textarea
 export default function ModeleDetail() {
     const { id } = useParams<{ id: string }>();
     const [data, setData] = useState<Courrier | null>(null);
-    const [loading, setLoading] = useState(true);
     const [err, setErr] = useState<string | null>(null);
     const [errorFields, setErrorFields] = useState<Record<string, boolean>>({});
     const navigate = useNavigate();
@@ -45,9 +44,8 @@ export default function ModeleDetail() {
 
     useEffect(() => {
         if (!id) return;
-
         const fetch = async () => {
-            setLoading(true);
+            setIsLoading(true);
             const { data, error } = await supabase
                 .from("courrier_template")
                 .select("*")
@@ -71,7 +69,7 @@ export default function ModeleDetail() {
                 setForm(initial);
             }
 
-            setLoading(false);
+            setIsLoading(false);
         };
 
         fetch();
@@ -176,7 +174,6 @@ export default function ModeleDetail() {
         }
     };
 
-    if (loading) return <p className="text-center mt-20">Chargement…</p>;
     if (err) return <p className="text-center text-red-600 mt-20">Erreur : {err}</p>;
     if (!data) return <p className="text-center mt-20">Aucun modèle trouvé.</p>;
 
