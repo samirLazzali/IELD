@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils"; // si tu as un util cn; sinon supprime cn et les appels
 import { useNavigate } from "react-router-dom";
-
+import LoaderOverlay from "@/components/LoaderOverlay";
 const EUR = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" });
 
 function stripBrackets(s?: string) {
@@ -35,9 +35,9 @@ export default function ModeleDetail() {
     const [data, setData] = useState<Courrier | null>(null);
     const [loading, setLoading] = useState(true);
     const [err, setErr] = useState<string | null>(null);
-    const [touched, setTouched] = useState<Record<string, boolean>>({});
     const [errorFields, setErrorFields] = useState<Record<string, boolean>>({});
     const navigate = useNavigate();
+    const [isLoading, setIsLoading] = useState(false);
 
     // état du formulaire (clé = id du champ ; valeur = saisie utilisateur)
     const [form, setForm] = useState<Record<string, string>>({});
@@ -102,6 +102,7 @@ export default function ModeleDetail() {
 
     const onSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setIsLoading(true);
         if (!data) return;
         // vérifie tous les champs
         const newErrors: Record<string, boolean> = {};
@@ -181,76 +182,81 @@ export default function ModeleDetail() {
 
     return (
         <div className="min-h-screen pt-32 pb-20 container mx-auto px-4 max-w-3xl">
-            <h1 className="text-4xl font-bold mb-2">{data.title}</h1>
-            <p className="text-muted-foreground mb-6">{data.categorie}</p>
-            <p className="text-lg font-semibold mb-8">{EUR.format(Number(data.amount_cents / 100))}</p>
+            <LoaderOverlay visible={isLoading} label="Génération du courrier…" />
+            <div aria-hidden={isLoading} className={isLoading ? "pointer-events-none opacity-0" : "opacity-100 transition-opacity"}>
 
-            {data.description && <p className="mb-8">{data.description}</p>}
+                <h1 className="text-4xl font-bold mb-2">{data.title}</h1>
+                <p className="text-muted-foreground mb-6">{data.categorie}</p>
+                <p className="text-lg font-semibold mb-8">{EUR.format(Number(data.amount_cents / 100))}</p>
 
-            <form onSubmit={onSubmit} className="space-y-6">
-                {fields.length === 0 && (
-                    <p className="text-muted-foreground">Aucun champ pour ce modèle.</p>
-                )}
-                {fields.map((f) => {
-                    const t = guessType(f);
-                    const hasError = !!errorFields[f.id];
+                {data.description && <p className="mb-8">{data.description}</p>}
 
-                    const commonProps = {
-                        id: f.id,
-                        name: f.id,
-                        // A voir si je decide de garder le label AI generated ou directement le [exctraceted] qui est directement ce que Ines à mis dans le doc
-                        placeholder: stripBrackets(f.extracted),
-                        value: form[f.id] ?? "",
-                        onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-                            onChangeField(f.id, e.target.value);
-                            if (e.target.value.trim() !== "") clearFieldError(f.id);
-                        },
-                        className: hasError
-                            ? "border-red-500 focus-visible:ring-red-500"
-                            : undefined,
-                    };
+                <form onSubmit={onSubmit} className="space-y-6">
+                    {fields.length === 0 && (
+                        <p className="text-muted-foreground">Aucun champ pour ce modèle.</p>
+                    )}
+                    {fields.map((f) => {
+                        const t = guessType(f);
+                        const hasError = !!errorFields[f.id];
 
-                    return (
-                        <div key={f.id} className="space-y-2">
-                            <label
-                                htmlFor={f.id}
-                                className={`block text-sm font-medium ${hasError ? "text-red-600" : ""
-                                    }`}
-                            >
-                                {f.label}
-                                <span className="text-red-500 ml-1">*</span>
+                        const commonProps = {
+                            id: f.id,
+                            name: f.id,
+                            // A voir si je decide de garder le label AI generated ou directement le [exctraceted] qui est directement ce que Ines à mis dans le doc
+                            placeholder: stripBrackets(f.extracted),
+                            value: form[f.id] ?? "",
+                            onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+                                onChangeField(f.id, e.target.value);
+                                if (e.target.value.trim() !== "") clearFieldError(f.id);
+                            },
+                            className: hasError
+                                ? "border-red-500 focus-visible:ring-red-500"
+                                : undefined,
+                        };
 
-                            </label>
+                        return (
+                            <div key={f.id} className="space-y-2">
+                                <label
+                                    htmlFor={f.id}
+                                    className={`block text-sm font-medium ${hasError ? "text-red-600" : ""
+                                        }`}
+                                >
+                                    {f.label}
+                                    <span className="text-red-500 ml-1">*</span>
 
-                            {t === "textarea" ? (
-                                <Textarea {...commonProps} className={cn("min-h-28")} />
-                            ) : t === "date" ? (
-                                <Input {...commonProps} type="date" />
-                            ) : t === "number" ? (
-                                <Input {...commonProps} type="number" step="any" />
-                            ) : (
-                                <Input {...commonProps} type="text" />
-                            )}
-                            {hasError && (
-                                <p className="text-xs text-red-500">Champ requis</p>
-                            )}
-                        </div>
-                    );
-                })}
+                                </label>
 
-                <button
-                    type="submit"
-                    disabled={submitting}
-                    className="w-full py-3 rounded-lg bg-primary text-white font-medium hover:bg-primary/90 transition disabled:opacity-50"
+                                {t === "textarea" ? (
+                                    <Textarea {...commonProps} className={cn("min-h-28")} />
+                                ) : t === "date" ? (
+                                    <Input {...commonProps} type="date" />
+                                ) : t === "number" ? (
+                                    <Input {...commonProps} type="number" step="any" />
+                                ) : (
+                                    <Input {...commonProps} type="text" />
+                                )}
+                                {hasError && (
+                                    <p className="text-xs text-red-500">Champ requis</p>
+                                )}
+                            </div>
+                        );
+                    })}
+
+                    <button
+                        type="submit"
+                        // disabled={submitting}
+                        disabled={isLoading}
+                        className="w-full py-3 rounded-lg bg-primary text-white font-medium hover:bg-primary/90 transition disabled:opacity-50"
+                    >
+                        {submitting ? "Validation…" : "Valider"}
+                    </button>
+                </form>
+
+                <p
+                    className="inline-block mt-6 text-primary text-xs italic"
                 >
-                    {submitting ? "Validation…" : "Valider"}
-                </button>
-            </form>
-
-            <p
-                className="inline-block mt-6 text-primary text-xs italic"
-            >
-                Attention, pour le moment vos informations ne sont pas encore sauvegardé.                </p>
+                    Attention, pour le moment vos informations ne sont pas encore sauvegardé.                </p>
+            </div>
         </div>
     );
 }
