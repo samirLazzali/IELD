@@ -122,3 +122,24 @@ All colors MUST be HSL.
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Cercle loader 60s, une seule fois, non loop */
+@keyframes loader-fill-stroke {
+  from {
+    stroke-dashoffset: 301.5929;
+    /* ≈ 2 * π * 48 */
+  }
+
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Classe appliquée au cercle "progress" */
+.loader-ring {
+  stroke-dasharray: 301.5929;
+  stroke-dashoffset: 301.5929;
+  transform-origin: 50% 50%;
+  transform: rotate(-90deg);
+  animation: loader-fill-stroke 60s linear forwards;
+}
