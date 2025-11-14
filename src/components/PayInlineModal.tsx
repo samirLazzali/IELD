@@ -53,7 +53,9 @@ function InnerPaymentForm({
     const [email, setEmail] = useState("");
     const sugestedAmountFloat = sugestedAmountCents / 100;
     const [amountFloat, setAmount] = useState<number>(sugestedAmountFloat);
-
+    const [amountInput, setAmountInput] = useState(
+        amountFloat != null ? String(amountFloat) : ""
+    );
     // --- Stripe Card state ---
     const [cardComplete, setCardComplete] = useState(false);
     const [cardErrorMsg, setCardErrorMsg] = useState<string | null>(null);
@@ -256,23 +258,51 @@ function InnerPaymentForm({
                 <label className="text-sm block mb-1">Montant</label>
                 <input
                     type="text"
-                    min={min}
-                    step="0.5"
-                    value={amountFloat}
                     inputMode="decimal"
-                    onBlur={(e) => { if (!amountFloat) { setAmount(min); } }}
+                    pattern="[0-9]*[.,]?[0-9]*"
+                    value={amountInput}
                     onChange={(e) => {
-                        const v = parseFloat(e.target.value);
+                        const raw = e.target.value;
+
+                        setAmountInput(raw);
+
+                        // accepte virgule et point
+                        const normalized = raw.replace(",", ".");
+                        const v = parseFloat(normalized);
+
+                        if (isNaN(v)) {
+                            setAmount(min); // ou 0, selon ton modèle
+                            return;
+                        }
+
                         setAmount(v);
                         // si l'utilisateur repasse à 0 dans un contexte gratuit, nettoyer les erreurs carte
-                        if ((min === 0) && (v <= 0)) {
+                        if (min === 0 && v <= 0) {
                             setCardErrorMsg(null);
                             setCardComplete(false);
                         }
                     }}
+                    onBlur={() => {
+                        // Normalisation quand on quitte le champ
+                        if (amountInput == null || belowMin) {
+                            setAmount(min);
+                            setAmountInput(String(min));
+                            return;
+                        }
+
+                        // ici tu peux forcer l’arrondi au step 0.5 si tu veux
+                        // const rounded = Math.round(amountFloat * 2) / 2;
+
+                        // enforce min
+                        // const final = Math.max(rounded, min);
+
+                        setAmount(amountFloat);
+                        setAmountInput(String(amountFloat));
+                    }}
                     className={`w-full border rounded-md px-3 py-2 ${belowMin ? "border-red-500" : ""
                         }`}
                 />
+
                 {belowMin && (
                     <p className="text-xs text-red-600 mt-1">
                         Le montant ne peut pas être inférieur à {min.toFixed(2)} €
@@ -302,7 +332,7 @@ function InnerPaymentForm({
                 disabled={loading || (paying && !stripe)}
                 className="w-full py-3 rounded-md bg-primary text-white font-medium hover:bg-primary/90 transition disabled:opacity-50"
             >
-                {loading ? "Traitement..." : cents <= 0 ? "Continuer gratuitement" : "Payer"}
+                {loading ? "Traitement..." : (amountFloat <= 0 && !belowMin) ? "Continuer gratuitement" : "Payer"}
             </button>
 
             <p className="mt-4 text-xs text-center text-muted-foreground">
