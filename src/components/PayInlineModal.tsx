@@ -259,8 +259,9 @@ function InnerPaymentForm({
                     min={0}
                     step="0.5"
                     value={amountFloat}
-                    onChange={(e) => {
-                        const v = parseFloat(e.target.value);
+                    inputMode="decimal"
+                    onBlur={(e) => {
+                        const v = parseFloat(e.target.value || "0");
                         setAmount(v);
                         // si l'utilisateur repasse à 0 dans un contexte gratuit, nettoyer les erreurs carte
                         if ((min === 0) && (v <= 0)) {
@@ -271,33 +272,6 @@ function InnerPaymentForm({
                     className={`w-full border rounded-md px-3 py-2 ${belowMin ? "border-red-500" : ""
                         }`}
                 />
-                {/* <input
-                    type="text"
-                    inputMode="decimal"
-                    pattern="[0-9]*[.,]?[0-9]*"
-                    value={amountFloat} // hack pour éviter le 0 par défaut
-                    onChange={(e) => {
-                        const v = parseFloat(e.target.value);
-                        setAmount(v);
-                        // si l'utilisateur repasse à 0 dans un contexte gratuit, nettoyer les erreurs carte
-                        if ((min === 0) && (v <= 0)) {
-                            setCardErrorMsg(null);
-                            setCardComplete(false);
-                        }
-                        // let v = e.target.value.replace(",", "."); // accepte virgule iPhone
-                        // if (v === "") {
-                        // setAmount(0);
-                        // return;
-                        // }
-
-                        // const parsed = parseFloat(v);
-                        // if (!isNaN(parsed)) {
-                        // setAmount(parsed);
-                        // }
-                    }}
-                    className={`w-full border rounded-md px-3 py-2 ${belowMin ? "border-red-500" : ""
-                        }`}
-                /> */}
                 {belowMin && (
                     <p className="text-xs text-red-600 mt-1">
                         Le montant ne peut pas être inférieur à {min.toFixed(2)} €
