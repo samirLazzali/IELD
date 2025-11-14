@@ -21,7 +21,8 @@ function useDebouncedValue<T>(value: T, delay = 300) {
 }
 
 const Modeles = () => {
-  const [searchQuery, setSearchQuery] = useState("");
+  const params = new URLSearchParams(window.location.search);
+  const [searchQuery, setSearchQuery] = useState(params.get("cat") || "");
   const debounced = useDebouncedValue(searchQuery, 300);
 
   const [items, setItems] = useState<Courrier[]>([]);

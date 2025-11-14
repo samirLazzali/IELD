@@ -16,8 +16,12 @@ export const ProductCard = ({ id, title, price, category }: ProductCardProps) =>
   const handleClick = () => {
     navigate(`/modeles/${id}`);
   };
+
   return (
-    <Card className="hover:shadow-lg transition-all duration-300 border-border">
+    <Card
+      onClick={handleClick}
+      className="hover:shadow-lg transition-all duration-300 border-border cursor-pointer hover:scale-[1.02]"
+    >
       <CardHeader>
         <div className="w-12 h-12 rounded-lg bg-accent/20 flex items-center justify-center mb-3">
           <FileText className="h-6 w-6 text-accent-foreground" />
@@ -31,9 +35,17 @@ export const ProductCard = ({ id, title, price, category }: ProductCardProps) =>
         <p className="text-2xl font-semibold">{price}</p>
       </CardContent>
       <CardFooter>
-        <Button onClick={handleClick}
-          className="w-full rounded-full">Acheter maintenant</Button>
+        <Button
+          onClick={(e) => {
+            e.stopPropagation(); // ← évite que le clic du bouton déclenche la card
+            handleClick();
+          }}
+          className="w-full rounded-full"
+        >
+          Acheter maintenant
+        </Button>
       </CardFooter>
     </Card>
   );
 };
+
