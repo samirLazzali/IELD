@@ -255,12 +255,12 @@ function InnerPaymentForm({
             <div className="mb-4">
                 <label className="text-sm block mb-1">Montant</label>
                 <input
-                    type="number"
-                    min={0}
+                    type="text"
+                    min={min}
                     step="0.5"
                     value={amountFloat}
                     inputMode="decimal"
-                    onBlur={(e) => { if (!amountFloat) { setAmount(0); } }}
+                    onBlur={(e) => { if (!amountFloat) { setAmount(min); } }}
                     onChange={(e) => {
                         const v = parseFloat(e.target.value);
                         setAmount(v);
