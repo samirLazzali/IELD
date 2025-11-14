@@ -15,6 +15,7 @@ import ModeleDetail from "./pages/ModeleDetail";
 import SoumissionDetail from "./pages/SoumissionDetail";
 import NotFound from "./pages/NotFound";
 import Merci from "./pages/Merci";
+import { ScrollToTop } from "./ScrollToTop";
 
 const queryClient = new QueryClient();
 
@@ -24,6 +25,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <ScrollToTop />   {/* ← TEST */}
         <div className="min-h-screen flex flex-col">
           <Header />
           <main className="flex-grow">
