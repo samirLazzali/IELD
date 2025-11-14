@@ -276,17 +276,25 @@ function InnerPaymentForm({
                     type="text"
                     inputMode="decimal"
                     pattern="[0-9]*[.,]?[0-9]*"
-                    value={amountFloat === 0 ? "" : amountFloat} // hack pour éviter le 0 par défaut
+                    value={amountFloat} // hack pour éviter le 0 par défaut
                     onChange={(e) => {
-                        let v = e.target.value.replace(",", "."); // accepte virgule iPhone
-                        if (v === "") {
-                            setAmount(0);
-                            return;
+                        const v = parseFloat(e.target.value || "0");
+                        setAmount(v);
+                        // si l'utilisateur repasse à 0 dans un contexte gratuit, nettoyer les erreurs carte
+                        if ((min === 0) && (v <= 0)) {
+                            setCardErrorMsg(null);
+                            setCardComplete(false);
                         }
-                        const parsed = parseFloat(v);
-                        if (!isNaN(parsed)) {
-                            setAmount(parsed);
-                        }
+                        // let v = e.target.value.replace(",", "."); // accepte virgule iPhone
+                        // if (v === "") {
+                        // setAmount(0);
+                        // return;
+                        // }
+
+                        // const parsed = parseFloat(v);
+                        // if (!isNaN(parsed)) {
+                        // setAmount(parsed);
+                        // }
                     }}
                     className={`w-full border rounded-md px-3 py-2 ${belowMin ? "border-red-500" : ""
                         }`}
