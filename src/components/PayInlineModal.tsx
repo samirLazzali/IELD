@@ -260,8 +260,9 @@ function InnerPaymentForm({
                     step="0.5"
                     value={amountFloat}
                     inputMode="decimal"
-                    onBlur={(e) => {
-                        const v = parseFloat(e.target.value || "0");
+                    onBlur={(e) => { if (!amountFloat) { setAmount(0); } }}
+                    onChange={(e) => {
+                        const v = parseFloat(e.target.value);
                         setAmount(v);
                         // si l'utilisateur repasse à 0 dans un contexte gratuit, nettoyer les erreurs carte
                         if ((min === 0) && (v <= 0)) {
