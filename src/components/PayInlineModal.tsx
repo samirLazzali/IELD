@@ -254,7 +254,7 @@ function InnerPaymentForm({
             {/* --- Montant --- */}
             <div className="mb-4">
                 <label className="text-sm block mb-1">Montant</label>
-                <input
+                {/* <input
                     type="number"
                     min={0}
                     step="0.5"
@@ -266,6 +266,26 @@ function InnerPaymentForm({
                         if ((min === 0) && (v <= 0)) {
                             setCardErrorMsg(null);
                             setCardComplete(false);
+                        }
+                    }}
+                    className={`w-full border rounded-md px-3 py-2 ${belowMin ? "border-red-500" : ""
+                        }`}
+                />
+                 */}
+                <input
+                    type="text"
+                    inputMode="decimal"
+                    pattern="[0-9]*[.,]?[0-9]*"
+                    value={amountFloat === 0 ? "" : amountFloat} // hack pour éviter le 0 par défaut
+                    onChange={(e) => {
+                        let v = e.target.value.replace(",", "."); // accepte virgule iPhone
+                        if (v === "") {
+                            setAmount(0);
+                            return;
+                        }
+                        const parsed = parseFloat(v);
+                        if (!isNaN(parsed)) {
+                            setAmount(parsed);
                         }
                     }}
                     className={`w-full border rounded-md px-3 py-2 ${belowMin ? "border-red-500" : ""
