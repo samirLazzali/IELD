@@ -99,7 +99,7 @@ function InnerPaymentForm({
         const errors = {
             firstName: firstName.trim() === "",
             lastName: lastName.trim() === "",
-            email: paying && !emailValid,
+            email: !emailValid,
             belowMin: paying && !freeAllowed && cents < minCents,
             // Carte requise seulement si on est dans un flux payant valide (pas bloqué par belowMin)
             card: paying && !belowMin && showCard && !cardComplete,
