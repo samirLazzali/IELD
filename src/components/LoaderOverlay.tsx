@@ -25,7 +25,7 @@ export default function LoaderOverlay({
 
     return (
         <div
-            className="flex flex-col items-center min-h-screen pt-32 pb-20 container mx-auto px-4 max-w-3xl"
+            className="fixed inset-0 z-50 flex flex-col items-center min-h-screen pt-48 pb-20 container mx-auto px-4 max-w-3xl"
             role="alertdialog"
             aria-live="assertive"
             aria-busy="true"
